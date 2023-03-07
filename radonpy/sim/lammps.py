@@ -17,7 +17,7 @@ from rdkit import Chem
 from rdkit import Geometry as Geom
 from ..core import calc, poly, const, utils
 
-__version__ = '0.2.5'
+__version__ = '0.2.3'
 
 mdtraj_avail = True
 try:
@@ -353,10 +353,7 @@ class LAMMPS():
         """
 
         indata = []
-        if md.log_append:
-            indata.append('log %s append' % (md.log_file))
-        else:
-            indata.append('log %s' % (md.log_file))
+        indata.append('log %s append' % (md.log_file))
         indata.append('units %s' % (md.units))
         indata.append('atom_style %s' % (md.atom_style))
         if md.pbc:
@@ -413,6 +410,10 @@ class LAMMPS():
         for i, wf in enumerate(md.wf):
             if wf.type == 'minimize':
                 indata.append('')
+                if md.dump_file: #FIX_TEST
+                    indata.append('undump dump0') #FIX_TEST
+                if md.xtc_file:#FIX_TEST
+                    indata.append('undump xtc0')#FIX_TEST
                 indata.append('min_style %s' % (wf.min_style))
                 indata.append('minimize %f %f %i %i' % (wf.etol, wf.ftol, wf.maxiter, wf.maxeval))
                 indata.append('reset_timestep 0')
@@ -433,11 +434,12 @@ class LAMMPS():
                     indata.append('compute cmol%i all chunk/atom molecule nchunk once limit 0 ids once compress no' % (i+1))
                     unfix.append('uncompute cmol%i' % (i+1))
 
-                # Generate "fix deform"
-                if wf.deform:
-                    indata.append('')
-                    indata.append('# deform')
-                    self.make_input_deform(md, wf, i, indata, unfix)
+                # FIX_TEST
+                # # Generate "fix deform"
+                # if wf.deform:
+                #     indata.append('')
+                #     indata.append('# deform')
+                #     self.make_input_deform(md, wf, i, indata, unfix)
 
                 # Generate "fix efield"
                 if wf.efield:
@@ -483,6 +485,13 @@ class LAMMPS():
                 if wf.shake:
                     indata.append('fix shake%i all shake 1e-4 1000 0 m 1.0' % (i+1))
                     unfix.append('unfix shake%i' % (i+1))
+                
+                #FIX_TEST
+                # Generate "fix deform"            
+                if wf.deform:
+                    indata.append('')
+                    indata.append('# deform')
+                    self.make_input_deform(md, wf, i, indata, unfix)
 
                 # Generate anisotropic pressure
                 if wf.ensemble in ['npt', 'nph']:
@@ -3203,4 +3212,3 @@ def MolFromLAMMPSdata(file_name, bond_order=True):
     mol = calc.mol_trans_in_cell(mol, confId=conf_id)
 
     return mol
-
